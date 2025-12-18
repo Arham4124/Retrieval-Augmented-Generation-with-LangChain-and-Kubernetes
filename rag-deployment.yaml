@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-app
+  labels:
+    app: rag-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rag-app
+  template:
+    metadata:
+      labels:
+        app: rag-app
+    spec:
+      containers:
+      - name: rag-app
+        image: localhost/langchain-app:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - secretRef:
+            name: langchain-secrets
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+          requests:
+            cpu: "200m"
+            memory: "512Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+        volumeMounts:
+        - name: documents-volume
+          mountPath: /app/documents
+        - name: chroma-db-volume
+          mountPath: /app/chroma_db
+      volumes:
+      - name: documents-volume
+        persistentVolumeClaim:
+          claimName: documents-pvc
+      - name: chroma-db-volume
+        persistentVolumeClaim:
+          claimName: chroma-db-pvc
